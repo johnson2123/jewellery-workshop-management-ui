@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthProvider';
+import { Toaster } from 'sonner';
+import { AuthProvider, ThemeProvider } from './context'; 
 import { useAuth } from './hooks/useAuth';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './components/AppLayout';
@@ -8,6 +9,7 @@ import AppLayout from './components/AppLayout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import Profile from './pages/Profile'; 
 import Unauthorized from './pages/Unauthorized';
 import NotFound from './pages/NotFound';
 
@@ -57,44 +59,59 @@ const InventoryPlaceholder = () => (
 export default function App() {
   return (
     <BrowserRouter>
-      {/* Global Auth Context Provider */}
-      <AuthProvider>
-        <Routes>
-          {/* Public Open Routes (Redirects to /dashboard if logged in) */}
-          <Route 
-            path="/login" 
-            element={
-              <PublicOnlyRoute>
-                <Login />
-              </PublicOnlyRoute>
-            } 
-          />
-          <Route 
-            path="/register" 
-            element={
-              <PublicOnlyRoute>
-                <Register />
-              </PublicOnlyRoute>
-            } 
-          />
-          <Route path="/unauthorized" element={<Unauthorized />} />
+      {/* Global Theme Context Provider */}
+      <ThemeProvider>
+        {/* Global Auth Context Provider */}
+        <AuthProvider>
+          <Routes>
+            {/* Public Open Routes (Redirects to /dashboard if logged in) */}
+            <Route 
+              path="/login" 
+              element={
+                <PublicOnlyRoute>
+                  <Login />
+                </PublicOnlyRoute>
+              } 
+            />
+            <Route 
+              path="/register" 
+              element={
+                <PublicOnlyRoute>
+                  <Register />
+                </PublicOnlyRoute>
+              } 
+            />
+            <Route path="/unauthorized" element={<Unauthorized />} />
 
-          {/* Protected Routes Pipeline */}
-          <Route element={<ProtectedRoute />}>
-            {/* AppLayout wraps protected pages with the workshop header & sidebar */}
-            <Route element={<AppLayout />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/orders" element={<OrdersPlaceholder />} />
-              <Route path="/artisans" element={<ArtisansPlaceholder />} />
-              <Route path="/inventory" element={<InventoryPlaceholder />} />
+            {/* Protected Routes Pipeline */}
+            <Route element={<ProtectedRoute />}>
+              {/* AppLayout wraps protected pages with the workshop header & sidebar */}
+              <Route element={<AppLayout />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/profile" element={<Profile />} /> {/* 👈 Added this route */}
+                <Route path="/orders" element={<OrdersPlaceholder />} />
+                <Route path="/artisans" element={<ArtisansPlaceholder />} />
+                <Route path="/inventory" element={<InventoryPlaceholder />} />
+              </Route>
             </Route>
-          </Route>
 
-          {/* Fallback Redirects */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </AuthProvider>
+            {/* Fallback Redirects */}
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+
+          {/* 
+            Global Notification Container.
+            Configured for high contrast and desktop utility suitable for management environments. 
+          */}
+          <Toaster 
+            position="top-right" 
+            richColors 
+            closeButton 
+            visibleToasts={5}
+          />
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

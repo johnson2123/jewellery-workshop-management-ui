@@ -45,7 +45,6 @@ export const Login = () => {
       await login(credentials);
       navigate(from, { replace: true });
     } catch (err) {
-      // apiClient.js unwraps C# errors into err.message
       setErrorMsg(err.message || 'Invalid credentials. Please verify your email and password.');
     } finally {
       setIsSubmitting(false);

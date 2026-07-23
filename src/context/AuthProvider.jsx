@@ -9,7 +9,6 @@ const initializeAuthOnce = () => {
   if (!authInitializationPromise) {
     authInitializationPromise = authApi.getCurrentSession();
   }
-
   return authInitializationPromise;
 };
 
@@ -30,20 +29,18 @@ export const AuthProvider = ({ children }) => {
 
         if (authData?.accessToken) {
           setAccessToken(authData.accessToken);
-
           if (isMounted) {
             setUser(authData.user);
           }
         } else {
           clearAccessToken();
-
           if (isMounted) {
             setUser(null);
           }
         }
       } catch {
         clearAccessToken();
-
+        resetAuthInitialization(); // Clean up cache on failure so next check is fresh
         if (isMounted) {
           setUser(null);
         }
@@ -57,14 +54,12 @@ export const AuthProvider = ({ children }) => {
     const handleAuthExpired = () => {
       clearAccessToken();
       resetAuthInitialization();
-
       if (isMounted) {
         setUser(null);
       }
     };
 
     window.addEventListener('auth:expired', handleAuthExpired);
-
     initializeAuth();
 
     return () => {
@@ -75,16 +70,11 @@ export const AuthProvider = ({ children }) => {
 
   const login = useCallback(async (credentials) => {
     setIsLoading(true);
-
     try {
       const authData = await authApi.login(credentials);
-
       setAccessToken(authData.accessToken);
       setUser(authData.user);
-
-      // Ensure future initialization uses this session
       resetAuthInitialization();
-
       return authData;
     } finally {
       setIsLoading(false);
@@ -93,7 +83,6 @@ export const AuthProvider = ({ children }) => {
 
   const register = useCallback(async (userData) => {
     setIsLoading(true);
-
     try {
       return await authApi.register(userData);
     } finally {
@@ -103,7 +92,6 @@ export const AuthProvider = ({ children }) => {
 
   const logout = useCallback(async () => {
     setIsLoading(true);
-
     try {
       await authApi.logout();
     } catch (error) {

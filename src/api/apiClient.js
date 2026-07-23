@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { toast } from 'sonner';
 import { getAccessToken, setAccessToken, clearAccessToken } from './tokenStore';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7199/api/v1';
@@ -26,7 +27,7 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
-// 1. Request Interceptor: Attach Access Token
+// Request Interceptor: Attach Access Token
 apiClient.interceptors.request.use(
   (config) => {
     const token = getAccessToken();
@@ -38,18 +39,31 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// 2. Response Interceptor: Handle API Unwrapping & Silent Refresh
+// Response Interceptor: Handle API Unwrapping, Toast Notifications & Silent Refresh
 apiClient.interceptors.response.use(
   (response) => {
     const apiResponse = response.data;
+    const config = response.config;
 
     // Unwrap C# ApiResponse<T> contract if present
     if (apiResponse && typeof apiResponse.isSuccess === 'boolean') {
       if (apiResponse.isSuccess) {
+        // Success Toast Logic
+        if (config.successToast) {
+          const successMessage = typeof config.successToast === 'string'
+            ? config.successToast
+            : (apiResponse.message || 'Operation completed successfully.');
+          toast.success(successMessage);
+        }
         return apiResponse.data;
       } else {
         const errorMessage =
           apiResponse.errors?.join(', ') || apiResponse.message || 'Operation failed.';
+        
+        if (!config.skipErrorToast) {
+          toast.error(errorMessage);
+        }
+
         const customError = new Error(errorMessage);
         customError.response = response;
         return Promise.reject(customError);
@@ -60,8 +74,9 @@ apiClient.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
-
     const responseData = error.response?.data;
+    
+    // Extract C# backend structured errors or fallback messages
     const backendMessage =
       responseData?.errors?.join(', ') ||
       responseData?.message ||
@@ -72,22 +87,26 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       const currentToken = getAccessToken();
 
-      // Terminal conditions where we SHOULD NOT attempt /auth/refresh-token:
-      // 1. Login fails
-      // 2. The refresh request itself returned 401
-      // 3. /auth/me failed on cold start AND we have no access token in memory to exchange
-      const isLoginOrRefresh =
-        originalRequest.url?.includes('/auth/refresh-token') ||
-        originalRequest.url?.includes('/auth/login');
+      // Convert URL to lowercase to prevent case-sensitivity mismatches (e.g. /Auth vs /auth)
+      const requestUrlLower = originalRequest.url?.toLowerCase() || '';
       
-      const isColdStartMeWithoutToken =
-        originalRequest.url?.includes('/auth/me') && !currentToken;
+      const isLoginRequest = requestUrlLower.includes('/auth/login');
+      const isRefreshRequest = requestUrlLower.includes('/auth/refresh-token');
+      const isColdStartMeWithoutToken = requestUrlLower.includes('/auth/me') && !currentToken;
 
-      if (isLoginOrRefresh || isColdStartMeWithoutToken) {
+      // 1. TERMINAL CONDITION: If actual login request returns 401, bubble up backend validation error
+      if (isLoginRequest) {
+        toast.error(backendMessage); // Added toast call to prevent bypassing notifications on early returns
+        const loginError = new Error(backendMessage);
+        loginError.response = error.response;
+        return Promise.reject(loginError);
+      }
+
+      // 2. If token refresh or cold start session verification fails
+      if (isRefreshRequest || isColdStartMeWithoutToken) {
         clearAccessToken();
         
-        // Dispatch auth:expired event only if it wasn't a standard login attempt
-        if (!originalRequest.url?.includes('/auth/login')) {
+        if (!isRefreshRequest) {
           window.dispatchEvent(new Event('auth:expired'));
         }
 
@@ -95,10 +114,14 @@ apiClient.interceptors.response.use(
           ? 'No active session found.'
           : 'Session expired. Please log in again.';
 
+        // Prevent showing toast alerts during initial cold-start session verification
+        if (!isColdStartMeWithoutToken && !originalRequest.skipErrorToast) {
+          toast.error(authErrorMessage);
+        }
+
         return Promise.reject(new Error(authErrorMessage));
       }
 
-      // If a refresh is already in progress, queue subsequent requests
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -114,7 +137,6 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // Perform token renewal using the HttpOnly cookie
         const refreshResponse = await axios.post(
           `${BASE_URL}/auth/refresh-token`,
           { expiredAccessToken: currentToken || '' },
@@ -127,13 +149,9 @@ apiClient.interceptors.response.use(
 
         if (newAccessToken) {
           setAccessToken(newAccessToken);
-
           apiClient.defaults.headers.common.Authorization = `Bearer ${newAccessToken}`;
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-
           processQueue(null, newAccessToken);
-
-          // Re-execute the original request with the new token
           return apiClient(originalRequest);
         } else {
           throw new Error('No access token returned from refresh endpoint.');
@@ -142,10 +160,19 @@ apiClient.interceptors.response.use(
         processQueue(refreshError, null);
         clearAccessToken();
         window.dispatchEvent(new Event('auth:expired'));
+        
+        if (!originalRequest.skipErrorToast) {
+          toast.error('Session expired. Please log in again.');
+        }
         return Promise.reject(new Error('Session expired. Please log in again.'));
       } finally {
         isRefreshing = false;
       }
+    }
+
+    // Default error auto-toasting unless explicitly bypassed
+    if (originalRequest && !originalRequest.skipErrorToast) {
+      toast.error(backendMessage);
     }
 
     const enhancedError = new Error(backendMessage);

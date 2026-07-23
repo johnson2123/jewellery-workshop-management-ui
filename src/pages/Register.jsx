@@ -84,11 +84,8 @@ export const Register = () => {
         navigate('/login');
       }, 2000);
     } catch (err) {
-      const serverMessage =
-        err.response?.data?.message ||
-        err.message ||
-        'Registration failed. Please check your inputs and try again.';
-      setErrorMsg(serverMessage);
+      // apiClient.js already formats C# validation arrays into a clean err.message
+      setErrorMsg(err.message || 'Registration failed. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
