@@ -1,18 +1,17 @@
-// src/components/ProtectedRoute.jsx
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 
 /**
- * Enterprise Route Guard Component
- * 
- * @param {Object} props
- * @param {string[]} [props.allowedRoles] - Array of required roles
+ * Enterprise Route Guard Component with Dynamic Menu Master Authorization
  */
-export const ProtectedRoute = ({ allowedRoles = [] }) => {
-  const { user, isAuthenticated, isLoading } = useAuth();
+export const ProtectedRoute = () => {
+  const { isAuthenticated, isLoading, menuList } = useAuth();
   const location = useLocation();
 
-  // 1. Loading state while checking refresh token / initial auth state (Aligned with Dark Theme)
+  // Universal system routes accessible to any authenticated user
+  const ALWAYS_ALLOWED_PATHS = ['/profile', '/unauthorized', '/dashboard'];
+
+  // 1. Loading state while restoring session or menu items
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-amber-500 space-y-3">
@@ -27,17 +26,15 @@ export const ProtectedRoute = ({ allowedRoles = [] }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // 3. Role-based authorization check (Case-insensitive)
-  if (allowedRoles.length > 0) {
-    const userRoles = (user?.roles || []).map((role) => role.toLowerCase());
-    const hasRequiredRole = allowedRoles.some((role) =>
-      userRoles.includes(role.toLowerCase())
-    );
+  // 3. Dynamic Backend Menu Path Authorization
+  const currentPath = location.pathname.toLowerCase();
+  
+  const isAllowedPath =
+    ALWAYS_ALLOWED_PATHS.includes(currentPath) ||
+    menuList.some((item) => item.path && item.path.toLowerCase() === currentPath);
 
-    if (!hasRequiredRole) {
-      // User is logged in, but lacks permission for this specific route
-      return <Navigate to="/unauthorized" replace />;
-    }
+  if (!isAllowedPath) {
+    return <Navigate to="/unauthorized" replace />;
   }
 
   // 4. Authorized: Render child routes

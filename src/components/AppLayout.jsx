@@ -1,22 +1,20 @@
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard,
-  Briefcase,
-  Users,
-  Coins,
   LogOut,
   Menu,
   X,
   Sparkles,
   Sun,
-  Moon
+  Moon,
+  ChevronRight
 } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import useTheme from '../hooks/useTheme';
+import { renderMenuIcon } from '../utils/iconMapper';
 
 export const AppLayout = () => {
-  const { user, logout } = useAuth();
+  const { user, menuList, logout } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -36,13 +34,6 @@ export const AppLayout = () => {
     await logout();
     navigate('/login', { replace: true });
   };
-
-  const navItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'Job Cards / Orders', path: '/orders', icon: Briefcase },
-    { name: 'Artisans / Karigars', path: '/artisans', icon: Users },
-    { name: 'Metal Inventory', path: '/inventory', icon: Coins },
-  ];
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-zinc-950 font-sans antialiased text-slate-800 dark:text-zinc-100 flex flex-col md:flex-row transition-colors duration-150">
@@ -105,22 +96,29 @@ export const AppLayout = () => {
             </button>
           </div>
 
-          {/* 👤 Interactive User Profile Badge NavLink */}
+          {/* 👤 Interactive User Profile Badge NavLink with View Profile affordance */}
           <NavLink
             to="/profile"
             onClick={() => setIsMobileMenuOpen(false)}
             className={({ isActive }) =>
-              `block p-4 m-3 rounded-xl border transition-all text-left focus:outline-none focus:ring-1 focus:ring-amber-500/40 ${
+              `group relative block p-4 m-3 rounded-xl border transition-all text-left focus:outline-none focus:ring-1 focus:ring-amber-500/40 ${
                 isActive
                   ? 'bg-slate-50 dark:bg-zinc-950 border-amber-500 shadow-md shadow-amber-500/5'
                   : 'bg-slate-50/50 dark:bg-zinc-950/50 border-slate-200 dark:border-zinc-800 hover:border-amber-500/40 hover:bg-slate-100/60 dark:hover:bg-zinc-900/40'
               }`
             }
           >
-            <p className="text-[10px] text-amber-600 dark:text-amber-400/90 uppercase font-extrabold tracking-wider">Logged in as</p>
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] text-amber-600 dark:text-amber-400/90 uppercase font-extrabold tracking-wider">Logged in as</p>
+              <span className="text-[10px] font-semibold text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                View Profile <ChevronRight className="w-3 h-3" />
+              </span>
+            </div>
+
             <p className="font-semibold text-slate-900 dark:text-zinc-100 truncate text-sm mt-0.5" title={user?.email || user?.userName}>
               {user?.email || user?.userName || 'Workshop Admin'}
             </p>
+
             {user?.roles && (
               <span className="inline-block mt-2 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs px-2.5 py-0.5 rounded-md border border-amber-500/20 font-semibold truncate max-w-full">
                 {Array.isArray(user.roles) ? user.roles.join(', ') : user.roles}
@@ -128,32 +126,32 @@ export const AppLayout = () => {
             )}
           </NavLink>
 
-          {/* Navigation Links */}
+          {/* Dynamic Navigation Links from Backend API */}
           <nav className="p-3 space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-semibold transition-all ${
-                      isActive
-                        ? 'bg-amber-500 text-slate-950 font-bold shadow-lg shadow-amber-500/10'
-                        : 'text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800/60 hover:text-amber-600 dark:hover:text-amber-400'
-                    }`
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      <Icon className={`w-4 h-4 stroke-[2.2] ${isActive ? 'text-slate-950' : 'text-amber-500 dark:text-amber-400/80'}`} />
-                      <span>{item.name}</span>
-                    </>
-                  )}
-                </NavLink>
-              );
-            })}
+            {menuList && menuList.map((item) => (
+              <NavLink
+                key={item.id || item.path}
+                to={item.path}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-semibold transition-all ${
+                    isActive
+                      ? 'bg-amber-500 text-slate-950 font-bold shadow-lg shadow-amber-500/10'
+                      : 'text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800/60 hover:text-amber-600 dark:hover:text-amber-400'
+                  }`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    {renderMenuIcon(
+                      item.icon,
+                      `w-4 h-4 stroke-[2.2] ${isActive ? 'text-slate-950' : 'text-amber-500 dark:text-amber-400/80'}`
+                    )}
+                    <span>{item.title}</span>
+                  </>
+                )}
+              </NavLink>
+            ))}
           </nav>
         </div>
 

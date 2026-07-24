@@ -12,6 +12,12 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile'; 
 import Unauthorized from './pages/Unauthorized';
 import NotFound from './pages/NotFound';
+import Activities from './pages/Activities';
+import Processes from './pages/Processes';
+import Jobs from './pages/Jobs';
+import Inventory from './pages/Inventory';
+import StockTransfers from './pages/StockTransfers';
+import StockReturns from './pages/StockReturns';
 
 // Helper component to redirect already authenticated users away from Login/Register
 const PublicOnlyRoute = ({ children }) => {
@@ -31,40 +37,23 @@ const PublicOnlyRoute = ({ children }) => {
   return children;
 };
 
-// --- Temporary Module Placeholders for Nav Links ---
 
-const OrdersPlaceholder = () => (
-  <div className="bg-slate-900 border border-amber-500/20 p-8 rounded-2xl text-center space-y-2">
-    <h1 className="text-2xl font-bold text-white">Job Cards & Orders Module</h1>
-    <p className="text-slate-400 text-sm">Under development — will connect directly with your C# Order API.</p>
+
+const MyJobsPlaceholder = () => (
+  <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-8 rounded-2xl shadow-sm space-y-2">
+    <h1 className="text-2xl font-bold text-slate-900 dark:text-zinc-100">My Assigned Jobs</h1>
+    <p className="text-slate-500 dark:text-zinc-400 text-sm">View and update jobs assigned to your queue.</p>
   </div>
 );
 
-const ArtisansPlaceholder = () => (
-  <div className="bg-slate-900 border border-amber-500/20 p-8 rounded-2xl text-center space-y-2">
-    <h1 className="text-2xl font-bold text-white">Artisans & Karigars Management</h1>
-    <p className="text-slate-400 text-sm">Under development — track artisan piece rates, issues, and returns.</p>
-  </div>
-);
-
-const InventoryPlaceholder = () => (
-  <div className="bg-slate-900 border border-amber-500/20 p-8 rounded-2xl text-center space-y-2">
-    <h1 className="text-2xl font-bold text-white">Metal & Stone Inventory</h1>
-    <p className="text-slate-400 text-sm">Under development — vault stock, 22K/18K gold balances, and loss metrics.</p>
-  </div>
-);
-
-// --- Main App Component ---
 
 export default function App() {
   return (
     <BrowserRouter>
-      {/* Global Theme Context Provider */}
       <ThemeProvider>
-        {/* Global Auth Context Provider */}
         <AuthProvider>
           <Routes>
-            {/* Public Open Routes (Redirects to /dashboard if logged in) */}
+            {/* Public Open Routes */}
             <Route 
               path="/login" 
               element={
@@ -85,13 +74,16 @@ export default function App() {
 
             {/* Protected Routes Pipeline */}
             <Route element={<ProtectedRoute />}>
-              {/* AppLayout wraps protected pages with the workshop header & sidebar */}
               <Route element={<AppLayout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/profile" element={<Profile />} /> {/* 👈 Added this route */}
-                <Route path="/orders" element={<OrdersPlaceholder />} />
-                <Route path="/artisans" element={<ArtisansPlaceholder />} />
-                <Route path="/inventory" element={<InventoryPlaceholder />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/activities" element={<Activities />} />
+                <Route path="/processes" element={<Processes />} />
+                <Route path="/jobs" element={<Jobs />} />
+                <Route path="/inventory" element={<Inventory />} />
+                <Route path="/my-jobs" element={<MyJobsPlaceholder />} />
+                <Route path="/stock-transfers" element={<StockTransfers />} />
+                <Route path="/stock-returns" element={<StockReturns />} />
               </Route>
             </Route>
 
@@ -100,10 +92,6 @@ export default function App() {
             <Route path="*" element={<NotFound />} />
           </Routes>
 
-          {/* 
-            Global Notification Container.
-            Configured for high contrast and desktop utility suitable for management environments. 
-          */}
           <Toaster 
             position="top-right" 
             richColors 
