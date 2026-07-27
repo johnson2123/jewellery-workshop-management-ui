@@ -5,11 +5,20 @@ import apiClient from './apiClient';
  */
 export const itemApi = {
   /**
-   * Get all items/metals
-   * GET /api/v1/ItemManagement
+   * Get unpaginated items/metals list (for dropdown options and lookups)
+   * GET /api/v1/ItemManagement/options
    */
   getAllItems: async () => {
-    return await apiClient.get('/ItemManagement');
+    return await apiClient.get('/ItemManagement/options');
+  },
+
+  /**
+   * Get paginated items/metals with search and filters
+   * GET /api/v1/ItemManagement?pageNumber={page}&pageSize={size}&searchTerm={search}&sortBy={field}&isDescending={bool}
+   * @param {Object} params - { pageNumber: number, pageSize: number, searchTerm: string, sortBy: string, isDescending: boolean }
+   */
+  getPagedItems: async (params) => {
+    return await apiClient.get('/ItemManagement', { params });
   },
 
   /**

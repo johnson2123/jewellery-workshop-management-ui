@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   Briefcase, 
   Plus, 
@@ -10,63 +10,70 @@ import {
   Check, 
   AlertTriangle,
   Inbox,
-  Hash
+  Hash,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { jobApi } from '../api/jobApi';
 
 export const Jobs = () => {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Filter & Pagination States
   const [searchTerm, setSearchTerm] = useState('');
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // Sorting States
+  const [sortBy, setSortBy] = useState('JobCode');
+  const [isDescending, setIsDescending] = useState(true);
 
   // Modal States
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedJob, setSelectedJob] = useState(null); // Null for Create, Object for Edit
+  const [selectedJob, setSelectedJob] = useState(null); 
   
   // Form Inputs State
   const [formData, setFormData] = useState({ jobCode: '', jobName: '' });
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Reload function for buttons and post-CRUD actions
-  const loadJobs = async () => {
+  // Fetch paginated jobs based on dependencies
+  const loadJobs = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await jobApi.getAllJobs();
-      setJobs(data || []);
+      const response = await jobApi.getPagedJobs({
+        pageNumber,
+        pageSize,
+        searchTerm: searchTerm.trim() || undefined,
+        sortBy,
+        isDescending
+      });
+      setJobs(response.items || []);
+      setTotalCount(response.totalCount || 0);
+      setTotalPages(response.totalPages || 1);
     } catch (error) {
       console.error('Failed to fetch jobs:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [pageNumber, pageSize, searchTerm, sortBy, isDescending]);
 
-  // Initial Data Fetch on Mount
+  // Debounced search queries
   useEffect(() => {
-    let isMounted = true;
+    const handler = setTimeout(() => {
+      loadJobs();
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [loadJobs]);
 
-    async function fetchData() {
-      try {
-        const data = await jobApi.getAllJobs();
-        if (isMounted) {
-          setJobs(data || []);
-        }
-      } catch (error) {
-        console.error('Failed to fetch jobs:', error);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    fetchData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setPageNumber(1); 
+  };
 
   // Open Modal for Create
   const handleOpenCreateModal = () => {
@@ -123,10 +130,8 @@ export const Jobs = () => {
       };
 
       if (selectedJob) {
-        // Edit Mode
         await jobApi.updateJob(selectedJob.jobCode, payload);
       } else {
-        // Create Mode
         await jobApi.createJob(payload);
       }
 
@@ -155,17 +160,10 @@ export const Jobs = () => {
     }
   };
 
-  // Filtered Jobs based on Search Term
-  const filteredJobs = jobs.filter(
-    (job) =>
-      job.jobName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      String(job.jobCode).includes(searchTerm)
-  );
-
   return (
     <div className="max-w-7xl mx-auto space-y-6 text-slate-800 dark:text-zinc-100 font-sans antialiased transition-colors duration-150">
       
-      {/* 🟢 Header Banner */}
+      {/* Header Banner */}
       <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
         <div>
           <div className="flex items-center gap-2.5">
@@ -201,12 +199,12 @@ export const Jobs = () => {
         </div>
       </div>
 
-      {/* 🟢 Enterprise Metric Quick Bar */}
+      {/* Enterprise Metric Quick Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
         <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-4 rounded-2xl flex items-center justify-between shadow-sm">
           <div>
             <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Total Job Orders</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-zinc-100 mt-1">{jobs.length}</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-zinc-100 mt-1">{totalCount}</p>
           </div>
           <div className="p-3 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl">
             <Briefcase className="w-5 h-5" />
@@ -216,7 +214,7 @@ export const Jobs = () => {
         <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-4 rounded-2xl flex items-center justify-between shadow-sm">
           <div>
             <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Filtered Items</p>
-            <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">{filteredJobs.length}</p>
+            <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">{jobs.length}</p>
           </div>
           <div className="p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl">
             <Hash className="w-5 h-5" />
@@ -224,38 +222,62 @@ export const Jobs = () => {
         </div>
       </div>
 
-      {/* 🟢 Filter & Search Bar */}
-      <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm flex items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
+      {/* Filter & Search Bar */}
+      <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="relative flex-1 w-full max-w-md">
           <Search className="w-4 h-4 text-slate-400 dark:text-zinc-500 absolute left-3.5 top-3" />
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={handleSearchChange}
             placeholder="Search by Job Code or Job Name..."
             className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 rounded-xl text-slate-900 dark:text-zinc-100 text-sm focus:outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-zinc-600"
           />
         </div>
-        <div className="text-xs font-medium text-slate-500 dark:text-zinc-400">
-          Total: <span className="text-slate-900 dark:text-zinc-100 font-bold">{filteredJobs.length}</span>
+
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          {/* Sort By Field Selector */}
+          <select
+            value={sortBy}
+            onChange={(e) => {
+              setSortBy(e.target.value);
+              setPageNumber(1);
+            }}
+            className="w-full sm:w-40 px-3.5 py-2 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 rounded-xl text-slate-900 dark:text-zinc-100 text-sm focus:outline-none transition-all cursor-pointer"
+          >
+            <option value="JobCode">Sort by Code</option>
+            <option value="JobName">Sort by Name</option>
+          </select>
+
+          {/* Sort Order Direction Toggle Button */}
+          <button
+            onClick={() => {
+              setIsDescending(!isDescending);
+              setPageNumber(1);
+            }}
+            className="w-full sm:w-auto px-4 py-2 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 active:scale-95 text-slate-700 dark:text-zinc-300 rounded-xl border border-slate-200 dark:border-zinc-800 font-semibold text-sm transition-all focus:outline-none flex items-center justify-center gap-2"
+            title="Toggle Sort Direction"
+          >
+            <span>{isDescending ? 'Descending ⬇️' : 'Ascending ⬆️'}</span>
+          </button>
         </div>
       </div>
 
-      {/* 🟢 Data Content Container */}
+      {/* Data Content Container */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden transition-all">
         {loading ? (
           <div className="p-12 text-center text-amber-500 space-y-3">
             <div className="w-8 h-8 border-3 border-amber-500/20 border-t-amber-500 rounded-full animate-spin mx-auto" />
             <p className="text-sm text-slate-500 dark:text-zinc-400">Loading job orders...</p>
           </div>
-        ) : filteredJobs.length === 0 ? (
+        ) : jobs.length === 0 ? (
           <div className="p-12 text-center text-slate-500 dark:text-zinc-400 space-y-3">
             <Inbox className="w-10 h-10 mx-auto text-slate-400 dark:text-zinc-600" />
             <p className="text-sm font-medium">No job orders found.</p>
           </div>
         ) : (
           <>
-            {/* 🖥️ Desktop Table View */}
+            {/* Desktop Table View */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-sm text-slate-600 dark:text-zinc-300">
                 <thead className="bg-slate-50 dark:bg-zinc-950/60 text-slate-700 dark:text-zinc-400 uppercase text-xs border-b border-slate-200 dark:border-zinc-800 font-semibold tracking-wider">
@@ -266,7 +288,7 @@ export const Jobs = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
-                  {filteredJobs.map((job) => (
+                  {jobs.map((job) => (
                     <tr key={job.jobCode} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/40 transition-colors">
                       <td className="px-6 py-4 font-bold text-amber-600 dark:text-amber-400 font-mono">
                         #{job.jobCode}
@@ -298,9 +320,9 @@ export const Jobs = () => {
               </table>
             </div>
 
-            {/* 📱 Mobile Responsive Cards View */}
+            {/* Mobile Responsive Cards View */}
             <div className="md:hidden divide-y divide-slate-100 dark:divide-zinc-800">
-              {filteredJobs.map((job) => (
+              {jobs.map((job) => (
                 <div key={job.jobCode} className="p-4 flex items-center justify-between gap-4">
                   <div>
                     <span className="text-xs font-bold text-amber-600 dark:text-amber-400 font-mono">
@@ -328,11 +350,56 @@ export const Jobs = () => {
                 </div>
               ))}
             </div>
+
+            {/* Pagination Controls Footer */}
+            <div className="px-6 py-4 bg-slate-50 dark:bg-zinc-950/40 border-t border-slate-200 dark:border-zinc-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+              <div className="flex items-center gap-2 text-slate-500 dark:text-zinc-400">
+                <span>Show</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setPageNumber(1);
+                  }}
+                  className="px-2 py-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-slate-900 dark:text-zinc-100 font-semibold focus:outline-none focus:border-amber-500"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+                <span>entries</span>
+              </div>
+
+              <div className="text-slate-500 dark:text-zinc-400">
+                Showing <span className="font-bold text-slate-900 dark:text-zinc-100">{Math.min((pageNumber - 1) * pageSize + 1, totalCount)}</span> to <span className="font-bold text-slate-900 dark:text-zinc-100">{Math.min(pageNumber * pageSize, totalCount)}</span> of <span className="font-bold text-slate-900 dark:text-zinc-100">{totalCount}</span> entries
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPageNumber(prev => Math.max(prev - 1, 1))}
+                  disabled={pageNumber === 1 || loading}
+                  className="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 disabled:opacity-50 transition-all focus:outline-none"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="font-semibold text-slate-700 dark:text-zinc-300">
+                  Page {pageNumber} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setPageNumber(prev => Math.min(prev + 1, totalPages))}
+                  disabled={pageNumber === totalPages || loading}
+                  className="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 disabled:opacity-50 transition-all focus:outline-none"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
           </>
         )}
       </div>
 
-      {/* 🟢 Create / Edit Modal Dialog */}
+      {/* Create / Edit Modal Dialog */}
       {isFormModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 backdrop-blur-sm animate-fade-in">
           <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
@@ -358,7 +425,7 @@ export const Jobs = () => {
                   type="number"
                   value={formData.jobCode}
                   onChange={(e) => setFormData({ ...formData, jobCode: e.target.value })}
-                  disabled={Boolean(selectedJob)} // Primary key disabled in edit mode
+                  disabled={Boolean(selectedJob)} 
                   placeholder="e.g. 301"
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 rounded-xl text-slate-900 dark:text-zinc-100 font-mono text-sm focus:outline-none transition-all disabled:opacity-60"
                 />
@@ -412,7 +479,7 @@ export const Jobs = () => {
         </div>
       )}
 
-      {/* 🟢 Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 backdrop-blur-sm animate-fade-in">
           <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl w-full max-w-sm shadow-2xl p-6 text-center space-y-4">

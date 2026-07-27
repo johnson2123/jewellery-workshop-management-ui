@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   GitCommit, 
   Plus, 
@@ -12,7 +12,9 @@ import {
   Inbox,
   Activity,
   Layers,
-  Filter
+  Filter,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { processApi } from '../api/processApi';
 import { activityApi } from '../api/activityApi';
@@ -22,66 +24,83 @@ export const Processes = () => {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Filter States
+  // Filter & Pagination States
   const [searchTerm, setSearchTerm] = useState('');
   const [activityFilter, setActivityFilter] = useState('');
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // Sorting States
+  const [sortBy, setSortBy] = useState('ProcessCode');
+  const [isDescending, setIsDescending] = useState(true);
 
   // Modal States
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedProcess, setSelectedProcess] = useState(null); // Null for Create, Object for Edit
+  const [selectedProcess, setSelectedProcess] = useState(null); 
   
   // Form Inputs State
   const [formData, setFormData] = useState({ processCode: '', processName: '', activityCode: '' });
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Load Data (Processes + Activities)
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [processData, activityData] = await Promise.all([
-        processApi.getAllProcesses(),
-        activityApi.getAllActivities(),
-      ]);
-      setProcesses(processData || []);
-      setActivities(activityData || []);
-    } catch (error) {
-      console.error('Failed to fetch process or activity data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Initial Data Fetch on Mount
+  // Fetch Lookup Data (Activities) once on mount
   useEffect(() => {
     let isMounted = true;
-
-    async function fetchData() {
+    const fetchLookups = async () => {
       try {
-        const [processData, activityData] = await Promise.all([
-          processApi.getAllProcesses(),
-          activityApi.getAllActivities(),
-        ]);
+        const activityData = await activityApi.getAllActivities();
         if (isMounted) {
-          setProcesses(processData || []);
           setActivities(activityData || []);
         }
       } catch (error) {
-        console.error('Failed to fetch process data:', error);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        console.error('Failed to fetch activity lookups:', error);
       }
-    }
-
-    fetchData();
-
-    return () => {
-      isMounted = false;
     };
+    fetchLookups();
+    return () => { isMounted = false; };
   }, []);
+
+  // Fetch paginated processes based on dependencies
+  const loadProcesses = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await processApi.getPagedProcesses({
+        pageNumber,
+        pageSize,
+        searchTerm: searchTerm.trim() || undefined,
+        sortBy,
+        isDescending
+      });
+      setProcesses(response.items || []);
+      setTotalCount(response.totalCount || 0);
+      setTotalPages(response.totalPages || 1);
+    } catch (error) {
+      console.error('Failed to fetch processes:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [pageNumber, pageSize, searchTerm, sortBy, isDescending]);
+
+  // Debounced search queries
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      loadProcesses();
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [loadProcesses]);
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setPageNumber(1); 
+  };
+
+  const handleActivityFilterChange = (e) => {
+    setActivityFilter(e.target.value);
+    setPageNumber(1);
+  };
 
   // Helper map for fast Activity Name lookup
   const activityMap = activities.reduce((acc, act) => {
@@ -154,15 +173,13 @@ export const Processes = () => {
       };
 
       if (selectedProcess) {
-        // Edit Mode
         await processApi.updateProcess(selectedProcess.processCode, payload);
       } else {
-        // Create Mode
         await processApi.createProcess(payload);
       }
 
       setIsFormModalOpen(false);
-      loadData();
+      loadProcesses();
     } catch (error) {
       console.error('Failed to save process:', error);
     } finally {
@@ -178,7 +195,7 @@ export const Processes = () => {
     try {
       await processApi.deleteProcess(selectedProcess.processCode);
       setIsDeleteModalOpen(false);
-      loadData();
+      loadProcesses();
     } catch (error) {
       console.error('Failed to delete process:', error);
     } finally {
@@ -186,22 +203,15 @@ export const Processes = () => {
     }
   };
 
-  // Filtered Processes based on Search Term and Activity Filter
+  // Filtering local processes subset with parent Activity criteria on top of search
   const filteredProcesses = processes.filter((proc) => {
-    const matchesSearch = 
-      proc.processName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      String(proc.processCode).includes(searchTerm);
-    
-    const matchesActivity = 
-      !activityFilter || String(proc.activityCode) === activityFilter;
-
-    return matchesSearch && matchesActivity;
+    return !activityFilter || String(proc.activityCode) === activityFilter;
   });
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 text-slate-800 dark:text-zinc-100 font-sans antialiased transition-colors duration-150">
       
-      {/* 🟢 Header Banner */}
+      {/* Header Banner */}
       <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
         <div>
           <div className="flex items-center gap-2.5">
@@ -219,7 +229,7 @@ export const Processes = () => {
 
         <div className="flex items-center gap-3">
           <button
-            onClick={loadData}
+            onClick={loadProcesses}
             disabled={loading}
             className="h-10 w-10 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 active:scale-95 text-slate-600 dark:text-zinc-300 rounded-xl border border-slate-200 dark:border-zinc-800 flex items-center justify-center transition-all disabled:opacity-50 focus:outline-none"
             title="Refresh Data"
@@ -237,12 +247,12 @@ export const Processes = () => {
         </div>
       </div>
 
-      {/* 🟢 Enterprise Stats Cards */}
+      {/* Enterprise Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-4 rounded-2xl flex items-center justify-between shadow-sm">
           <div>
             <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Total Processes</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-zinc-100 mt-1">{processes.length}</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-zinc-100 mt-1">{totalCount}</p>
           </div>
           <div className="p-3 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl">
             <Layers className="w-5 h-5" />
@@ -270,24 +280,25 @@ export const Processes = () => {
         </div>
       </div>
 
-      {/* 🟢 Filter & Search Bar */}
-      <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+      {/* Filter & Search Bar */}
+      <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm flex flex-col lg:flex-row items-center justify-between gap-4">
         <div className="relative flex-1 w-full max-w-md">
           <Search className="w-4 h-4 text-slate-400 dark:text-zinc-500 absolute left-3.5 top-3" />
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={handleSearchChange}
             placeholder="Search by Process Code or Name..."
             className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 rounded-xl text-slate-900 dark:text-zinc-100 text-sm focus:outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-zinc-600"
           />
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+          {/* Parent Activity Filter */}
           <select
             value={activityFilter}
-            onChange={(e) => setActivityFilter(e.target.value)}
-            className="w-full sm:w-56 px-3.5 py-2 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 rounded-xl text-slate-900 dark:text-zinc-100 text-sm focus:outline-none transition-all cursor-pointer"
+            onChange={handleActivityFilterChange}
+            className="w-full sm:w-48 px-3.5 py-2 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 rounded-xl text-slate-900 dark:text-zinc-100 text-sm focus:outline-none transition-all cursor-pointer"
           >
             <option value="">All Activities</option>
             {activities.map((act) => (
@@ -296,10 +307,35 @@ export const Processes = () => {
               </option>
             ))}
           </select>
+
+          {/* Sort By Field */}
+          <select
+            value={sortBy}
+            onChange={(e) => {
+              setSortBy(e.target.value);
+              setPageNumber(1);
+            }}
+            className="w-full sm:w-40 px-3.5 py-2 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 rounded-xl text-slate-900 dark:text-zinc-100 text-sm focus:outline-none transition-all cursor-pointer"
+          >
+            <option value="ProcessCode">Sort by Code</option>
+            <option value="ProcessName">Sort by Name</option>
+          </select>
+
+          {/* Direction Toggle */}
+          <button
+            onClick={() => {
+              setIsDescending(!isDescending);
+              setPageNumber(1);
+            }}
+            className="w-full sm:w-auto px-4 py-2 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 active:scale-95 text-slate-700 dark:text-zinc-300 rounded-xl border border-slate-200 dark:border-zinc-800 font-semibold text-sm transition-all focus:outline-none flex items-center justify-center gap-2"
+            title="Toggle Sort Direction"
+          >
+            <span>{isDescending ? 'Descending ⬇️' : 'Ascending ⬆️'}</span>
+          </button>
         </div>
       </div>
 
-      {/* 🟢 Data Content Container */}
+      {/* Data Content Container */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden transition-all">
         {loading ? (
           <div className="p-12 text-center text-amber-500 space-y-3">
@@ -313,7 +349,7 @@ export const Processes = () => {
           </div>
         ) : (
           <>
-            {/* 🖥️ Desktop Table View */}
+            {/* Desktop Table View */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-sm text-slate-600 dark:text-zinc-300">
                 <thead className="bg-slate-50 dark:bg-zinc-950/60 text-slate-700 dark:text-zinc-400 uppercase text-xs border-b border-slate-200 dark:border-zinc-800 font-semibold tracking-wider">
@@ -363,7 +399,7 @@ export const Processes = () => {
               </table>
             </div>
 
-            {/* 📱 Mobile Responsive Cards View */}
+            {/* Mobile Responsive Cards View */}
             <div className="md:hidden divide-y divide-slate-100 dark:divide-zinc-800">
               {filteredProcesses.map((process) => (
                 <div key={process.processCode} className="p-4 flex items-center justify-between gap-4">
@@ -398,11 +434,56 @@ export const Processes = () => {
                 </div>
               ))}
             </div>
+
+            {/* Pagination Controls Footer */}
+            <div className="px-6 py-4 bg-slate-50 dark:bg-zinc-950/40 border-t border-slate-200 dark:border-zinc-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+              <div className="flex items-center gap-2 text-slate-500 dark:text-zinc-400">
+                <span>Show</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setPageNumber(1);
+                  }}
+                  className="px-2 py-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-slate-900 dark:text-zinc-100 font-semibold focus:outline-none focus:border-amber-500"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+                <span>entries</span>
+              </div>
+
+              <div className="text-slate-500 dark:text-zinc-400">
+                Showing <span className="font-bold text-slate-900 dark:text-zinc-100">{Math.min((pageNumber - 1) * pageSize + 1, totalCount)}</span> to <span className="font-bold text-slate-900 dark:text-zinc-100">{Math.min(pageNumber * pageSize, totalCount)}</span> of <span className="font-bold text-slate-900 dark:text-zinc-100">{totalCount}</span> entries
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPageNumber(prev => Math.max(prev - 1, 1))}
+                  disabled={pageNumber === 1 || loading}
+                  className="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 disabled:opacity-50 transition-all focus:outline-none"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="font-semibold text-slate-700 dark:text-zinc-300">
+                  Page {pageNumber} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setPageNumber(prev => Math.min(prev + 1, totalPages))}
+                  disabled={pageNumber === totalPages || loading}
+                  className="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 disabled:opacity-50 transition-all focus:outline-none"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
           </>
         )}
       </div>
 
-      {/* 🟢 Create / Edit Modal Dialog */}
+      {/* Create / Edit Modal Dialog */}
       {isFormModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 backdrop-blur-sm animate-fade-in">
           <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
@@ -428,7 +509,7 @@ export const Processes = () => {
                   type="number"
                   value={formData.processCode}
                   onChange={(e) => setFormData({ ...formData, processCode: e.target.value })}
-                  disabled={Boolean(selectedProcess)} // Primary key disabled in edit mode
+                  disabled={Boolean(selectedProcess)} 
                   placeholder="e.g. 201"
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 rounded-xl text-slate-900 dark:text-zinc-100 font-mono text-sm focus:outline-none transition-all disabled:opacity-60"
                 />
@@ -503,7 +584,7 @@ export const Processes = () => {
         </div>
       )}
 
-      {/* 🟢 Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 backdrop-blur-sm animate-fade-in">
           <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl w-full max-w-sm shadow-2xl p-6 text-center space-y-4">

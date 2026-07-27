@@ -5,11 +5,20 @@ import apiClient from './apiClient';
  */
 export const processApi = {
   /**
-   * Get all processes
-   * GET /api/v1/ProcessManagement
+   * Get unpaginated processes list (for dropdown options and lookups)
+   * GET /api/v1/ProcessManagement/options
    */
   getAllProcesses: async () => {
-    return await apiClient.get('/ProcessManagement');
+    return await apiClient.get('/ProcessManagement/options');
+  },
+
+  /**
+   * Get paginated processes with search and filters
+   * GET /api/v1/ProcessManagement?pageNumber={page}&pageSize={size}&searchTerm={search}
+   * @param {Object} params - { pageNumber: number, pageSize: number, searchTerm: string }
+   */
+  getPagedProcesses: async (params) => {
+    return await apiClient.get('/ProcessManagement', { params });
   },
 
   /**

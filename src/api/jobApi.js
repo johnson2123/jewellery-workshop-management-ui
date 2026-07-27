@@ -5,11 +5,20 @@ import apiClient from './apiClient';
  */
 export const jobApi = {
   /**
-   * Get all jobs
-   * GET /api/v1/JobManagement
+   * Get unpaginated job orders list (for dropdown options and lookups)
+   * GET /api/v1/JobManagement/options
    */
   getAllJobs: async () => {
-    return await apiClient.get('/JobManagement');
+    return await apiClient.get('/JobManagement/options');
+  },
+
+  /**
+   * Get paginated job orders with search and filters
+   * GET /api/v1/JobManagement?pageNumber={page}&pageSize={size}&searchTerm={search}&sortBy={field}&isDescending={bool}
+   * @param {Object} params - { pageNumber: number, pageSize: number, searchTerm: string, sortBy: string, isDescending: boolean }
+   */
+  getPagedJobs: async (params) => {
+    return await apiClient.get('/JobManagement', { params });
   },
 
   /**

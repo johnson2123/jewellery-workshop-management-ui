@@ -5,11 +5,29 @@ import apiClient from './apiClient';
  */
 export const stockTransferApi = {
   /**
-   * Get all stock transfers/returns
+   * Get all stock transfers/returns (Legacy unpaginated fallback)
    * GET /api/v1/StockTransfer
    */
   getAllTransfers: async () => {
     return await apiClient.get('/StockTransfer');
+  },
+
+  /**
+   * Get paginated and grouped Workshop Issues
+   * GET /api/v1/StockTransfer/issues
+   * @param {Object} params - { pageNumber, pageSize, searchTerm, sortBy, isDescending }
+   */
+  getPagedIssues: async (params) => {
+    return await apiClient.get('/StockTransfer/issues', { params });
+  },
+
+  /**
+   * Get paginated and grouped Workshop Returns
+   * GET /api/v1/StockTransfer/returns
+   * @param {Object} params - { pageNumber, pageSize, searchTerm, sortBy, isDescending }
+   */
+  getPagedReturns: async (params) => {
+    return await apiClient.get('/StockTransfer/returns', { params });
   },
 
   /**

@@ -5,11 +5,20 @@ import apiClient from './apiClient';
  */
 export const activityApi = {
   /**
-   * Get all activities
-   * GET /api/v1/ActivityManagement
+   * Get unpaginated activities list (for dropdown options and lookups)
+   * GET /api/v1/ActivityManagement/options
    */
   getAllActivities: async () => {
-    return await apiClient.get('/ActivityManagement');
+    return await apiClient.get('/ActivityManagement/options');
+  },
+
+  /**
+   * Get paginated activities with search and filters
+   * GET /api/v1/ActivityManagement?pageNumber={page}&pageSize={size}&searchTerm={search}
+   * @param {Object} params - { pageNumber: number, pageSize: number, searchTerm: string }
+   */
+  getPagedActivities: async (params) => {
+    return await apiClient.get('/ActivityManagement', { params });
   },
 
   /**
