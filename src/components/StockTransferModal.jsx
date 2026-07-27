@@ -94,8 +94,8 @@ export const StockTransferModal = ({ isOpen, onClose, onSuccess, mode = 'ISSUE',
           setRows([{
             ...DEFAULT_ROW,
             fromOrTo: isReturnMode ? 'TO' : 'FROM',
-            processCode: procs.length > 0 ? String(procs[0].id || procs[0].code) : '',
-            jobCode: jobs.length > 0 ? String(jobs[0].id || jobs[0].code) : '',
+            processCode: procs.length > 0 ? String(procs[0].code || procs[0].id) : '',
+            jobCode: jobs.length > 0 ? String(jobs[0].code || jobs[0].id) : '',
             stockCode: stocks.length > 0 ? String(stocks[0].code || stocks[0].id) : '',
             isNew: true
           }]);
@@ -114,8 +114,8 @@ export const StockTransferModal = ({ isOpen, onClose, onSuccess, mode = 'ISSUE',
 
   // Add row
   const handleAddRow = () => {
-    const firstProc = processOptions.length > 0 ? String(processOptions[0].id || processOptions[0].code) : '';
-    const firstJob = jobOptions.length > 0 ? String(jobOptions[0].id || jobOptions[0].code) : '';
+    const firstProc = processOptions.length > 0 ? String(processOptions[0].code || processOptions[0].id) : '';
+    const firstJob = jobOptions.length > 0 ? String(jobOptions[0].code || jobOptions[0].id) : '';
     const firstStock = stockOptions.length > 0 ? String(stockOptions[0].code || stockOptions[0].id) : '';
 
     setRows([
@@ -168,7 +168,7 @@ export const StockTransferModal = ({ isOpen, onClose, onSuccess, mode = 'ISSUE',
       
       if (isEditable) {
         if (!r.processCode) {
-          setErrors(`Row #${i + 1}: Please select a Department/Worker.`);
+          setErrors(`Row #${i + 1}: Please select a Department/Worker Process.`);
           return;
         }
         if (!r.jobCode) {
@@ -290,7 +290,7 @@ export const StockTransferModal = ({ isOpen, onClose, onSuccess, mode = 'ISSUE',
                   <tr>
                     <th className="px-3 py-3">#</th>
                     <th className="px-3 py-3 w-32">Type</th>
-                    <th className="px-3 py-3">Department / Worker</th>
+                    <th className="px-3 py-3">Process / Department</th>
                     <th className="px-3 py-3">Job Number</th>
                     <th className="px-3 py-3">Stock Item</th>
                     <th className="px-3 py-3 w-20">Pieces</th>
@@ -302,7 +302,6 @@ export const StockTransferModal = ({ isOpen, onClose, onSuccess, mode = 'ISSUE',
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
                   {rows.map((row, idx) => {
-                    // Row is editable if it's newly added or belongs to the screen's active direction
                     const isRowEditable = row.isNew || (isReturnMode && row.fromOrTo === 'TO') || (!isReturnMode && row.fromOrTo === 'FROM');
                     const isRowReturn = row.fromOrTo === 'TO';
                     
@@ -310,7 +309,7 @@ export const StockTransferModal = ({ isOpen, onClose, onSuccess, mode = 'ISSUE',
                       <tr key={idx} className={`hover:bg-slate-50 dark:hover:bg-zinc-800/50 ${!isRowEditable ? 'bg-slate-50/50 dark:bg-zinc-950/20 opacity-80' : ''}`}>
                         <td className="px-3 py-3 font-bold font-mono text-slate-400">{idx + 1}</td>
                         
-                        {/* Type Column: Dropdown for new rows, Badge for saved rows */}
+                        {/* Type Column */}
                         <td className="px-3 py-3">
                           {row.isNew ? (
                             <select
@@ -332,23 +331,30 @@ export const StockTransferModal = ({ isOpen, onClose, onSuccess, mode = 'ISSUE',
                           )}
                         </td>
 
-                        {/* Department / Process */}
+                        {/* Department / Process Name */}
                         <td className="px-3 py-3">
                           {isRowEditable ? (
                             <select
                               value={row.processCode}
                               onChange={(e) => handleRowChange(idx, 'processCode', e.target.value)}
-                              className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg text-slate-900 dark:text-zinc-100 focus:border-amber-500 focus:outline-none"
+                              className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg text-slate-900 dark:text-zinc-100 focus:border-amber-500 focus:outline-none font-medium"
                             >
-                              {processOptions.map((opt) => (
-                                <option key={opt.id || opt.code} value={opt.id || opt.code}>
-                                  {opt.name || opt.code || `Process #${opt.id}`}
-                                </option>
-                              ))}
+                              {processOptions.map((opt) => {
+                                const code = opt.code || opt.id;
+                                const display = opt.name ? `#${code} - ${opt.name}` : `Process #${code}`;
+                                return (
+                                  <option key={code} value={code}>
+                                    {display}
+                                  </option>
+                                );
+                              })}
                             </select>
                           ) : (
-                            <span className="font-semibold text-slate-500 dark:text-zinc-400">
-                              {processOptions.find(o => String(o.id || o.code) === String(row.processCode))?.name || `Process #${row.processCode}`}
+                            <span className="font-semibold text-slate-900 dark:text-zinc-200">
+                              {(() => {
+                                const found = processOptions.find(o => String(o.code || o.id) === String(row.processCode));
+                                return found?.name ? `#${row.processCode} - ${found.name}` : `Process #${row.processCode}`;
+                              })()}
                             </span>
                           )}
                         </td>
@@ -362,7 +368,7 @@ export const StockTransferModal = ({ isOpen, onClose, onSuccess, mode = 'ISSUE',
                               className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg text-slate-900 dark:text-zinc-100 focus:border-amber-500 focus:outline-none"
                             >
                               {jobOptions.map((opt) => (
-                                <option key={opt.id || opt.code} value={opt.id || opt.code}>
+                                <option key={opt.code || opt.id} value={opt.code || opt.id}>
                                   {opt.name || `#${opt.code || opt.id}`}
                                 </option>
                               ))}

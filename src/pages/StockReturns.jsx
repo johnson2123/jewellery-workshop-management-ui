@@ -5,6 +5,7 @@ import StockTransferModal from '../components/StockTransferModal';
 
 export const StockReturns = () => {
   const [returns, setReturns] = useState([]);
+  const [processMap, setProcessMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -16,8 +17,18 @@ export const StockReturns = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const data = await stockTransferApi.getAllTransfers();
-      setReturns(data || []);
+      const [transfersData, processOptions] = await Promise.all([
+        stockTransferApi.getAllTransfers(),
+        stockTransferApi.getProcessOptions()
+      ]);
+
+      const pMap = {};
+      (processOptions || []).forEach(p => {
+        pMap[String(p.code)] = p.name;
+      });
+
+      setProcessMap(pMap);
+      setReturns(transfersData || []);
     } catch (err) {
       console.error('Failed to load stock returns:', err);
     } finally {
@@ -31,9 +42,19 @@ export const StockReturns = () => {
 
     async function fetchData() {
       try {
-        const data = await stockTransferApi.getAllTransfers();
+        const [transfersData, processOptions] = await Promise.all([
+          stockTransferApi.getAllTransfers(),
+          stockTransferApi.getProcessOptions()
+        ]);
+
         if (isMounted) {
-          setReturns(data || []);
+          const pMap = {};
+          (processOptions || []).forEach(p => {
+            pMap[String(p.code)] = p.name;
+          });
+
+          setProcessMap(pMap);
+          setReturns(transfersData || []);
         }
       } catch (err) {
         console.error('Failed to load stock returns:', err);
@@ -85,10 +106,16 @@ export const StockReturns = () => {
 
   const filteredDocs = docsList.filter(doc => 
     String(doc.docNo).includes(searchTerm) ||
-    doc.lines.some(l => 
-      String(l.jobCode || l.jobcode || '').includes(searchTerm) || 
-      (l.stockCode || l.stkcode || '').toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    doc.lines.some(l => {
+      const pCode = String(l.processCode || l.processcode || '');
+      const pName = processMap[pCode] || '';
+      return (
+        pCode.includes(searchTerm) ||
+        pName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        String(l.jobCode || l.jobcode || '').includes(searchTerm) || 
+        (l.stockCode || l.stkcode || '').toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    })
   );
 
   const handleDelete = async (docNo) => {
@@ -147,7 +174,7 @@ export const StockReturns = () => {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by Doc #, Job Code, or Stock Item..."
+            placeholder="Search by Doc #, Process Code / Name, Job Code..."
             className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 focus:border-emerald-500 rounded-xl text-slate-900 dark:text-zinc-100 text-sm focus:outline-none"
           />
         </div>
@@ -177,8 +204,13 @@ export const StockReturns = () => {
                     <span className="px-3 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono font-bold text-xs rounded-lg border border-emerald-500/20">
                       Doc #{doc.docNo}
                     </span>
-                    <span className="text-xs text-slate-400">
-                      {doc.docDate ? new Date(doc.docDate).toLocaleDateString() : 'N/A'}
+                    <span className="text-xs text-slate-500 dark:text-zinc-400 font-medium">
+                      {doc.docDate 
+                        ? new Date(doc.docDate).toLocaleString(undefined, {
+                            dateStyle: 'short',
+                            timeStyle: 'short'
+                          }) 
+                        : 'N/A'}
                     </span>
                     <span className="text-xs px-2 py-0.5 bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 rounded font-semibold flex items-center gap-1">
                       <Layers className="w-3 h-3 text-emerald-500" />
@@ -209,7 +241,7 @@ export const StockReturns = () => {
                   <table className="w-full text-left text-xs text-slate-600 dark:text-zinc-400">
                     <thead className="bg-slate-50 dark:bg-zinc-950/80 font-bold uppercase text-[10px] tracking-wider text-slate-400">
                       <tr>
-                        <th className="px-4 py-2">Department / Worker</th>
+                        <th className="px-4 py-2">Process / Department</th>
                         <th className="px-4 py-2">Job Number</th>
                         <th className="px-4 py-2">Stock Item</th>
                         <th className="px-4 py-2 text-right">Pieces</th>
@@ -222,6 +254,11 @@ export const StockReturns = () => {
                     <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
                       {doc.lines.map((line, idx) => {
                         const processCode = line.processCode || line.processcode;
+                        const pName = processMap[String(processCode)];
+                        
+                        // Option 1 Format: #2002 - Vacuum Casting
+                        const processDisplay = pName ? `#${processCode} - ${pName}` : `Process #${processCode}`;
+                        
                         const jobCode = line.jobCode || line.jobcode;
                         const stockCode = line.stockCode || line.stkcode;
                         const pieces = line.pieces;
@@ -232,7 +269,7 @@ export const StockReturns = () => {
 
                         return (
                           <tr key={idx}>
-                            <td className="px-4 py-2 font-medium text-slate-900 dark:text-zinc-200">Process #{processCode}</td>
+                            <td className="px-4 py-2 font-medium text-slate-900 dark:text-zinc-200">{processDisplay}</td>
                             <td className="px-4 py-2 font-mono">#{jobCode}</td>
                             <td className="px-4 py-2 font-mono font-bold text-emerald-600 dark:text-emerald-400">{stockCode}</td>
                             <td className="px-4 py-2 text-right font-mono">{pieces}</td>

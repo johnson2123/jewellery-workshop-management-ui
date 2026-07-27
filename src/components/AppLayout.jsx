@@ -36,10 +36,11 @@ export const AppLayout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-zinc-950 font-sans antialiased text-slate-800 dark:text-zinc-100 flex flex-col md:flex-row transition-colors duration-150">
+    /* Root container locked to viewport height */
+    <div className="h-screen w-screen overflow-hidden bg-slate-100 dark:bg-zinc-950 font-sans antialiased text-slate-800 dark:text-zinc-100 flex flex-col md:flex-row transition-colors duration-150">
 
       {/* 📱 Mobile Top Header */}
-      <header className="md:hidden bg-white dark:bg-zinc-900 text-amber-500 dark:text-amber-400 h-16 px-4 flex items-center justify-between sticky top-0 z-30 shadow-md dark:shadow-lg border-b border-slate-200 dark:border-zinc-800 transition-colors duration-150">
+      <header className="md:hidden bg-white dark:bg-zinc-900 text-amber-500 dark:text-amber-400 h-16 px-4 flex items-center justify-between shrink-0 z-30 shadow-md dark:shadow-lg border-b border-slate-200 dark:border-zinc-800 transition-colors duration-150">
         <div className="flex items-center gap-2.5 font-bold text-lg text-slate-900 dark:text-zinc-100">
           <div className="p-1.5 bg-amber-500 text-slate-950 rounded-lg shadow-md shadow-amber-500/20">
             <Sparkles className="w-5 h-5 fill-slate-950 stroke-[2.5]" />
@@ -48,7 +49,6 @@ export const AppLayout = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Mobile Theme Toggle Button */}
           <button
             onClick={toggleTheme}
             className="h-10 w-10 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 active:scale-95 rounded-xl flex items-center justify-center text-slate-600 dark:text-amber-400 border border-slate-200 dark:border-zinc-800 transition-all focus:outline-none"
@@ -68,15 +68,16 @@ export const AppLayout = () => {
         </div>
       </header>
 
-      {/* 🗂️ Workshop Sidebar Navigation */}
+      {/* 🗂️ Workshop Sidebar Navigation (Fixed full height, bottom-pinned sign out) */}
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-40 w-64 bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 flex flex-col justify-between border-r border-slate-200 dark:border-zinc-800 shadow-md shadow-slate-200/50 dark:shadow-none transition-all duration-200 ease-in-out md:translate-x-0 ${
+        className={`fixed md:static inset-y-0 left-0 z-40 w-64 h-full shrink-0 bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 flex flex-col justify-between border-r border-slate-200 dark:border-zinc-800 shadow-md shadow-slate-200/50 dark:shadow-none transition-all duration-200 ease-in-out md:translate-x-0 ${
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div>
+        {/* Top & Scrollable Menu items */}
+        <div className="flex flex-col min-h-0 overflow-y-auto">
           {/* Desktop Brand Header */}
-          <div className="hidden md:flex h-20 items-center justify-between px-6 bg-slate-50/80 dark:bg-zinc-950/80 font-bold text-slate-900 dark:text-zinc-100 text-lg border-b border-slate-200 dark:border-zinc-800 transition-colors duration-150">
+          <div className="hidden md:flex h-20 items-center justify-between px-6 bg-slate-50/80 dark:bg-zinc-950/80 font-bold text-slate-900 dark:text-zinc-100 text-lg border-b border-slate-200 dark:border-zinc-800 shrink-0 transition-colors duration-150">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-amber-500 text-slate-950 rounded-xl shadow-lg shadow-amber-500/20">
                 <Sparkles className="w-5 h-5 fill-slate-950 stroke-[2.5]" />
@@ -86,7 +87,6 @@ export const AppLayout = () => {
               </span>
             </div>
 
-            {/* Desktop Theme Toggle Button */}
             <button
               onClick={toggleTheme}
               className="h-9 w-9 bg-slate-100 dark:bg-zinc-950 hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-600 dark:text-amber-400 border border-slate-200 dark:border-zinc-800 rounded-lg flex items-center justify-center transition-all focus:outline-none"
@@ -96,12 +96,12 @@ export const AppLayout = () => {
             </button>
           </div>
 
-          {/* 👤 Interactive User Profile Badge NavLink with View Profile affordance */}
+          {/* 👤 User Profile Badge */}
           <NavLink
             to="/profile"
             onClick={() => setIsMobileMenuOpen(false)}
             className={({ isActive }) =>
-              `group relative block p-4 m-3 rounded-xl border transition-all text-left focus:outline-none focus:ring-1 focus:ring-amber-500/40 ${
+              `group relative block p-4 m-3 shrink-0 rounded-xl border transition-all text-left focus:outline-none focus:ring-1 focus:ring-amber-500/40 ${
                 isActive
                   ? 'bg-slate-50 dark:bg-zinc-950 border-amber-500 shadow-md shadow-amber-500/5'
                   : 'bg-slate-50/50 dark:bg-zinc-950/50 border-slate-200 dark:border-zinc-800 hover:border-amber-500/40 hover:bg-slate-100/60 dark:hover:bg-zinc-900/40'
@@ -126,8 +126,8 @@ export const AppLayout = () => {
             )}
           </NavLink>
 
-          {/* Dynamic Navigation Links from Backend API */}
-          <nav className="p-3 space-y-1">
+          {/* Dynamic Navigation Links */}
+          <nav className="p-3 space-y-1 overflow-y-auto">
             {menuList && menuList.map((item) => (
               <NavLink
                 key={item.id || item.path}
@@ -155,8 +155,8 @@ export const AppLayout = () => {
           </nav>
         </div>
 
-        {/* Logout Section */}
-        <div className="p-4 border-t border-slate-200 dark:border-zinc-800">
+        {/* Logout Section (Pinned to bottom) */}
+        <div className="p-4 border-t border-slate-200 dark:border-zinc-800 shrink-0">
           <button
             onClick={handleLogout}
             className="w-full h-11 bg-slate-100 dark:bg-zinc-800/80 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-200 dark:hover:border-rose-500/30 active:scale-[0.98] text-slate-600 dark:text-zinc-300 font-semibold rounded-xl text-sm border border-slate-200 dark:border-zinc-800 flex items-center justify-center gap-2 transition-all focus:outline-none"
@@ -176,8 +176,8 @@ export const AppLayout = () => {
         />
       )}
 
-      {/* 📄 Main Content Area */}
-      <main className="flex-1 min-w-0 p-4 sm:p-6 md:p-8 overflow-y-auto bg-slate-100 dark:bg-zinc-950 transition-colors duration-150">
+      {/* 📄 Main Content Area (Independent scroll) */}
+      <main className="flex-1 min-w-0 h-full overflow-y-auto p-4 sm:p-6 md:p-8 bg-slate-100 dark:bg-zinc-950 transition-colors duration-150">
         <Outlet />
       </main>
     </div>
