@@ -8,6 +8,9 @@ import AppLayout from './components/AppLayout';
 // Real Pages
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import VerifyOtp from './pages/VerifyOtp';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile'; 
 import Unauthorized from './pages/Unauthorized';
@@ -19,7 +22,7 @@ import Inventory from './pages/Inventory';
 import StockTransfers from './pages/StockTransfers';
 import StockReturns from './pages/StockReturns';
 
-// Helper component to redirect already authenticated users away from Login/Register
+// Helper component to redirect already authenticated users away from public auth pages
 const PublicOnlyRoute = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -37,15 +40,12 @@ const PublicOnlyRoute = ({ children }) => {
   return children;
 };
 
-
-
 const MyJobsPlaceholder = () => (
   <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-8 rounded-2xl shadow-sm space-y-2">
     <h1 className="text-2xl font-bold text-slate-900 dark:text-zinc-100">My Assigned Jobs</h1>
     <p className="text-slate-500 dark:text-zinc-400 text-sm">View and update jobs assigned to your queue.</p>
   </div>
 );
-
 
 export default function App() {
   return (
@@ -67,6 +67,30 @@ export default function App() {
               element={
                 <PublicOnlyRoute>
                   <Register />
+                </PublicOnlyRoute>
+              } 
+            />
+            <Route 
+              path="/forgot-password" 
+              element={
+                <PublicOnlyRoute>
+                  <ForgotPassword />
+                </PublicOnlyRoute>
+              } 
+            />
+            <Route 
+              path="/verify-otp" 
+              element={
+                <PublicOnlyRoute>
+                  <VerifyOtp />
+                </PublicOnlyRoute>
+              } 
+            />
+            <Route 
+              path="/reset-password" 
+              element={
+                <PublicOnlyRoute>
+                  <ResetPassword />
                 </PublicOnlyRoute>
               } 
             />

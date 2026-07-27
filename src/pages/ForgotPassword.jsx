@@ -1,51 +1,38 @@
 import { useState } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { 
-  Lock, 
   Mail, 
-  Eye, 
-  EyeOff, 
+  ArrowLeft, 
+  Loader2, 
   AlertCircle, 
-  CheckCircle2, 
-  ShieldCheck, 
   Sparkles, 
-  Loader2 
+  KeyRound,
+  CheckCircle2
 } from 'lucide-react';
-import useAuth from '../hooks/useAuth';
+import authApi from '../api/authApi';
 
-export const Login = () => {
-  const { login } = useAuth();
+export const ForgotPassword = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-
-  const from = location.state?.from?.pathname || '/dashboard';
-
-  const [credentials, setCredentials] = useState({ email: '', password: '' });
-  const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setCredentials((prev) => ({ ...prev, [name]: value }));
-    if (errorMsg) setErrorMsg('');
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setErrorMsg('');
-
-    if (!credentials.email || !credentials.password) {
-      setErrorMsg('Please enter both email and password.');
+    if (!email) {
+      setErrorMsg('Please enter your email address.');
       return;
     }
 
     try {
       setIsSubmitting(true);
-      await login(credentials);
-      navigate(from, { replace: true });
-    } catch (err) {
-      setErrorMsg(err.message || 'Invalid credentials. Please verify your email and password.');
+      setErrorMsg('');
+      await authApi.forgotPassword(email);
+      // Navigate to Stage 2 passing email in state
+      navigate('/verify-otp', { state: { email } });
+    } catch {
+      // Quiet navigation / fallback handling to prevent account enumeration
+      navigate('/verify-otp', { state: { email } });
     } finally {
       setIsSubmitting(false);
     }
@@ -54,7 +41,7 @@ export const Login = () => {
   return (
     <div className="min-h-screen w-full flex bg-slate-950 text-slate-100 font-sans antialiased selection:bg-amber-500 selection:text-slate-950">
       
-      {/* Left Panel - Branding & Trust Proof (Hidden on smaller screens) */}
+      {/* Left Panel - Branding & Trust Proof */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-linear-to-br from-slate-900 via-amber-950/40 to-slate-900 p-12 flex-col justify-between border-r border-amber-500/20">
         
         {/* Decorative Background Glows */}
@@ -75,28 +62,28 @@ export const Login = () => {
         {/* Center Hero Section */}
         <div className="relative z-10 my-auto max-w-lg space-y-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold tracking-wide">
-            <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-            Secure Vault & Job Card Tracking
+            <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+            Account Recovery Portal
           </div>
           <h2 className="text-4xl font-extrabold tracking-tight text-white leading-tight">
-            Precision control for custom jewellery production.
+            Secure, encrypted password recovery.
           </h2>
           <p className="text-slate-400 text-base leading-relaxed">
-            Monitor metal inventory, issue job cards to karigars, track ornament weights, and streamline workshop operations.
+            Verify your identity via a timed one-time passcode sent directly to your registered workshop email address.
           </p>
 
           <div className="pt-4 grid grid-cols-2 gap-4">
             <div className="p-4 rounded-xl bg-slate-900/80 border border-amber-500/20 backdrop-blur-sm">
               <div className="flex items-center gap-2 text-amber-400 font-semibold text-sm mb-1">
-                <CheckCircle2 className="w-4 h-4" /> Karigar Tracking
+                <CheckCircle2 className="w-4 h-4" /> Timed OTP
               </div>
-              <p className="text-xs text-slate-400">Manage piece rates, issue/returns & metal wastage.</p>
+              <p className="text-xs text-slate-400">Cryptographically secure 6-digit verification code.</p>
             </div>
             <div className="p-4 rounded-xl bg-slate-900/80 border border-amber-500/20 backdrop-blur-sm">
               <div className="flex items-center gap-2 text-amber-400 font-semibold text-sm mb-1">
-                <CheckCircle2 className="w-4 h-4" /> Metal Vault
+                <CheckCircle2 className="w-4 h-4" /> Single-Use Token
               </div>
-              <p className="text-xs text-slate-400">Real-time balances for Gold, Silver, and Alloy.</p>
+              <p className="text-xs text-slate-400">Short-lived action token for maximum vault security.</p>
             </div>
           </div>
         </div>
@@ -124,9 +111,12 @@ export const Login = () => {
           </div>
 
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Sign in to your account</h1>
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold mb-3">
+              Stage 1 of 3
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Forgot your password?</h1>
             <p className="text-sm text-slate-400 mt-2">
-              Enter your staff or admin credentials to access the workshop dashboard.
+              Enter the email address associated with your workshop account and we will dispatch a 6-digit verification code.
             </p>
           </div>
 
@@ -142,7 +132,7 @@ export const Login = () => {
             {/* Email Field */}
             <div className="space-y-1.5">
               <label htmlFor="email" className="block text-xs font-bold uppercase tracking-wider text-slate-300">
-                Email / Username
+                Workshop Email Address
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
@@ -150,51 +140,19 @@ export const Login = () => {
                 </div>
                 <input
                   id="email"
-                  type="text"
+                  type="email"
                   name="email"
                   autoComplete="email"
                   placeholder="admin@workshop.com"
-                  value={credentials.email}
-                  onChange={handleChange}
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (errorMsg) setErrorMsg('');
+                  }}
                   required
                   disabled={isSubmitting}
                   className="w-full h-12 pl-11 pr-4 rounded-xl bg-slate-800/80 border border-slate-700/80 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent disabled:opacity-50 transition-all"
                 />
-              </div>
-            </div>
-
-            {/* Password Field */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center">
-                <label htmlFor="password" className="block text-xs font-bold uppercase tracking-wider text-slate-300">
-                  Password
-                </label>
-              </div>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                  <Lock className="w-5 h-5" />
-                </div>
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  autoComplete="current-password"
-                  placeholder="••••••••••••"
-                  value={credentials.password}
-                  onChange={handleChange}
-                  required
-                  disabled={isSubmitting}
-                  className="w-full h-12 pl-11 pr-12 rounded-xl bg-slate-800/80 border border-slate-700/80 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent disabled:opacity-50 transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
-                  tabIndex={-1}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
               </div>
             </div>
 
@@ -207,33 +165,23 @@ export const Login = () => {
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Signing In...</span>
+                  <span>Sending Verification Code...</span>
                 </>
               ) : (
-                <span>Sign In to Workshop</span>
+                <span>Send Code</span>
               )}
             </button>
           </form>
 
-          {/* Footer Navigation Links */}
-          <div className="pt-4 border-t border-slate-800 text-center space-y-2">
-            <div>
-              <Link 
-                to="/forgot-password" 
-                className="font-semibold text-amber-400 hover:text-amber-300 hover:underline transition-colors text-sm"
-              >
-                Forgot your password?
-              </Link>
-            </div>
-            <div className="text-sm text-slate-400">
-              Need staff or artisan access?{' '}
-              <Link 
-                to="/register" 
-                className="font-semibold text-slate-300 hover:text-white hover:underline transition-colors"
-              >
-                Request access
-              </Link>
-            </div>
+          {/* Footer Back Link */}
+          <div className="pt-4 border-t border-slate-800 text-center">
+            <Link 
+              to="/login" 
+              className="inline-flex items-center gap-2 font-semibold text-slate-400 hover:text-white transition-colors text-sm"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Sign In</span>
+            </Link>
           </div>
 
         </div>
@@ -243,4 +191,4 @@ export const Login = () => {
   );
 };
 
-export default Login;
+export default ForgotPassword;

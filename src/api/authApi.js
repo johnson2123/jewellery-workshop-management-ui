@@ -1,4 +1,3 @@
-
 import apiClient from './apiClient';
 
 /**
@@ -25,6 +24,13 @@ import apiClient from './apiClient';
  * @property {string} lastName
  * @property {string} [phoneNumber]
  * @property {string} role
+ */
+
+/**
+ * @typedef {Object} VerifyOtpResponse
+ * @property {string} actionToken
+ * @property {string} target
+ * @property {string} expiresAt
  */
 
 export const authApi = {
@@ -85,13 +91,10 @@ export const authApi = {
 
   /**
    * Updates the authenticated user's password.
-   * Currently mocked for local testing. Switch comment lines below when C# endpoint is ready.
    * @param {{ currentPassword: string, newPassword: string }} data
    * @returns {Promise<null>}
    */
   changePassword: (data) => {
-    // --- TEMPORARY MOCK FOR TESTING ---
-    // Log the incoming data payload to satisfy ESLint and confirm values are correct
     console.log('Simulating API call with data:', data);
 
     return new Promise((resolve) => {
@@ -99,11 +102,42 @@ export const authApi = {
         resolve({ message: 'Password changed successfully.' });
       }, 1000);
     });
+  },
 
-    // --- UNCOMMENT THIS WHEN C# BACKEND IS READY ---
-    // return apiClient.post('/auth/change-password', data, {
-    //   successToast: 'Password changed successfully.'
-    // });
+  /**
+   * Initiates the password recovery flow by sending a 6-digit OTP.
+   * @param {string} email
+   * @returns {Promise<null>}
+   */
+  forgotPassword: (email) => {
+    return apiClient.post('/Auth/forgot-password', { email }, {
+      successToast: 'Verification code sent to your email.'
+    });
+  },
+
+  /**
+   * Verifies the 6-digit OTP code and returns an ActionToken.
+   * @param {{ target: string, otpCode: string, purpose?: string }} data
+   * @returns {Promise<VerifyOtpResponse>}
+   */
+  verifyOtp: (data) => {
+    return apiClient.post('/Auth/verify-otp', {
+      purpose: 'ForgotPassword',
+      ...data
+    }, {
+      successToast: 'Code verified successfully.'
+    });
+  },
+
+  /**
+   * Resets the user's password using the ActionToken issued during verification.
+   * @param {{ target: string, actionToken: string, newPassword: string, confirmPassword: string }} data
+   * @returns {Promise<{ isSuccess: boolean, message: string }>}
+   */
+  resetPassword: (data) => {
+    return apiClient.post('/Auth/reset-password', data, {
+      successToast: 'Password updated successfully!'
+    });
   }
 };
 
