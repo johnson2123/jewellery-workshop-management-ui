@@ -225,14 +225,12 @@ export const Login = () => {
                 Forgot your password?
               </Link>
             </div>
+            {/* UPDATED: Replaced /register link with Admin contact notice */}
             <div className="text-sm text-slate-400">
               Need staff or artisan access?{' '}
-              <Link 
-                to="/register" 
-                className="font-semibold text-slate-300 hover:text-white hover:underline transition-colors"
-              >
-                Request access
-              </Link>
+              <span className="font-semibold text-slate-300">
+                Contact your Workshop Administrator
+              </span>
             </div>
           </div>
 

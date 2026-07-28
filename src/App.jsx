@@ -1,3 +1,4 @@
+// App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { AuthProvider, ThemeProvider } from './context'; 
@@ -7,11 +8,11 @@ import AppLayout from './components/AppLayout';
 
 // Real Pages
 import Login from './pages/Login';
-import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import VerifyOtp from './pages/VerifyOtp';
 import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
+import UserManagement from './pages/UserManagement';
 import Profile from './pages/Profile'; 
 import Unauthorized from './pages/Unauthorized';
 import NotFound from './pages/NotFound';
@@ -63,14 +64,6 @@ export default function App() {
               } 
             />
             <Route 
-              path="/register" 
-              element={
-                <PublicOnlyRoute>
-                  <Register />
-                </PublicOnlyRoute>
-              } 
-            />
-            <Route 
               path="/forgot-password" 
               element={
                 <PublicOnlyRoute>
@@ -100,6 +93,7 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
               <Route element={<AppLayout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/users" element={<UserManagement />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/activities" element={<Activities />} />
                 <Route path="/processes" element={<Processes />} />

@@ -305,8 +305,8 @@ export const Register = () => {
                   disabled={isSubmitting}
                   className="w-full h-11 px-3 rounded-xl bg-slate-800/80 border border-slate-700/80 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
                 >
-                  <option value="Karigar">Karigar / Artisan</option>
-                  <option value="Staff">Workshop Staff</option>
+                  <option value="User">Artisan</option>
+                  <option value="Manager">Manager</option>
                   <option value="Admin">Admin</option>
                 </select>
               </div>
