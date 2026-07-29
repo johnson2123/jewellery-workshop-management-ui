@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  Coins, 
-  Plus, 
-  Search, 
-  Edit3, 
-  Trash2, 
-  RefreshCw, 
-  X, 
-  Check, 
+import {
+  Coins,
+  Plus,
+  Search,
+  Edit3,
+  Trash2,
+  RefreshCw,
+  X,
+  Check,
   AlertTriangle,
   Inbox,
   Percent,
@@ -20,7 +20,7 @@ import { itemApi } from '../api/itemApi';
 export const Inventory = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Filter & Pagination States
   const [searchTerm, setSearchTerm] = useState('');
   const [pageNumber, setPageNumber] = useState(1);
@@ -35,8 +35,8 @@ export const Inventory = () => {
   // Modal States
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null); 
-  
+  const [selectedItem, setSelectedItem] = useState(null);
+
   // Form Inputs State
   const [formData, setFormData] = useState({ itemCode: '', itemName: '', purity: '' });
   const [formErrors, setFormErrors] = useState({});
@@ -73,7 +73,7 @@ export const Inventory = () => {
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
-    setPageNumber(1); 
+    setPageNumber(1);
   };
 
   // Open Modal for Create
@@ -167,14 +167,28 @@ export const Inventory = () => {
     }
   };
 
-  // Compute stats
-  const averagePurity = items.length > 0 
-    ? (items.reduce((acc, cur) => acc + Number(cur.purity || 0), 0) / items.length).toFixed(2)
+  // Helper to render purity (converts 0.916 or 91.6 to fixed 91.60%)
+  const formatPurityDisplay = (val) => {
+    const num = Number(val || 0);
+    if (isNaN(num)) return '0.00%';
+    const percentage = num <= 1 && num > 0 ? num * 100 : num;
+    return `${percentage.toFixed(2)}%`;
+  };
+
+  // Compute stats using normalized purity values
+  const averagePurity = items.length > 0
+    ? (
+        items.reduce((acc, cur) => {
+          const val = Number(cur.purity || 0);
+          const pct = val <= 1 && val > 0 ? val * 100 : val;
+          return acc + pct;
+        }, 0) / items.length
+      ).toFixed(2)
     : '0.00';
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 text-slate-800 dark:text-zinc-100 font-sans antialiased transition-colors duration-150">
-      
+
       {/* Header Banner */}
       <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
         <div>
@@ -312,7 +326,7 @@ export const Inventory = () => {
                       </td>
                       <td className="px-6 py-4">
                         <span className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg text-xs font-bold border border-emerald-500/20">
-                          {Number(item.purity).toFixed(2)}%
+                          {formatPurityDisplay(item.purity)}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
@@ -349,7 +363,7 @@ export const Inventory = () => {
                         {item.itemCode}
                       </span>
                       <span className="text-xs px-2 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded font-bold">
-                        {Number(item.purity).toFixed(2)}%
+                        {formatPurityDisplay(item.purity)}
                       </span>
                     </div>
                     <p className="font-bold text-slate-900 dark:text-zinc-100 text-sm">
@@ -427,7 +441,7 @@ export const Inventory = () => {
       {isFormModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 backdrop-blur-sm animate-fade-in">
           <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-            
+
             <div className="p-5 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between">
               <h3 className="font-bold text-lg text-slate-900 dark:text-zinc-100">
                 {selectedItem ? 'Edit Metal Item' : 'Add New Metal Item'}
@@ -449,7 +463,7 @@ export const Inventory = () => {
                   type="text"
                   value={formData.itemCode}
                   onChange={(e) => setFormData({ ...formData, itemCode: e.target.value })}
-                  disabled={Boolean(selectedItem)} 
+                  disabled={Boolean(selectedItem)}
                   placeholder="e.g. AU-22K or AG-925"
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 rounded-xl text-slate-900 dark:text-zinc-100 font-mono text-sm focus:outline-none transition-all uppercase placeholder:normal-case disabled:opacity-60"
                 />
@@ -480,12 +494,12 @@ export const Inventory = () => {
                 </label>
                 <input
                   type="number"
-                  step="0.01"
+                  step="0.001"
                   min="0"
                   max="100"
                   value={formData.purity}
                   onChange={(e) => setFormData({ ...formData, purity: e.target.value })}
-                  placeholder="e.g. 91.60"
+                  placeholder="e.g. 0.916 or 91.60"
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 rounded-xl text-slate-900 dark:text-zinc-100 text-sm focus:outline-none transition-all"
                 />
                 {formErrors.purity && (

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, Link } from 'react-router-dom';
 import {
   LogOut,
   Menu,
   X,
-  Sparkles,
+  Gem,
   Sun,
   Moon,
   ChevronRight
@@ -41,12 +41,15 @@ export const AppLayout = () => {
 
       {/* 📱 Mobile Top Header */}
       <header className="md:hidden bg-white dark:bg-zinc-900 text-amber-500 dark:text-amber-400 h-16 px-4 flex items-center justify-between shrink-0 z-30 shadow-md dark:shadow-lg border-b border-slate-200 dark:border-zinc-800 transition-colors duration-150">
-        <div className="flex items-center gap-2.5 font-bold text-lg text-slate-900 dark:text-zinc-100">
+        <Link
+          to="/dashboard"
+          className="flex items-center gap-2.5 font-bold text-lg text-slate-900 dark:text-zinc-100 focus:outline-none"
+        >
           <div className="p-1.5 bg-amber-500 text-slate-950 rounded-lg shadow-md shadow-amber-500/20">
-            <Sparkles className="w-5 h-5 fill-slate-950 stroke-[2.5]" />
+            <Gem className="w-5 h-5 stroke-[2.5]" />
           </div>
           <span className="tracking-wide text-base">Jewellery Workshop</span>
-        </div>
+        </Link>
 
         <div className="flex items-center gap-2">
           <button
@@ -78,14 +81,17 @@ export const AppLayout = () => {
         <div className="flex flex-col min-h-0 overflow-y-auto">
           {/* Desktop Brand Header */}
           <div className="hidden md:flex h-20 items-center justify-between px-6 bg-slate-50/80 dark:bg-zinc-950/80 font-bold text-slate-900 dark:text-zinc-100 text-lg border-b border-slate-200 dark:border-zinc-800 shrink-0 transition-colors duration-150">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-500 text-slate-950 rounded-xl shadow-lg shadow-amber-500/20">
-                <Sparkles className="w-5 h-5 fill-slate-950 stroke-[2.5]" />
+            <Link
+              to="/dashboard"
+              className="flex items-center gap-3 focus:outline-none group"
+            >
+              <div className="p-2 bg-amber-500 text-slate-950 rounded-xl shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
+                <Gem className="w-5 h-5 stroke-[2.5]" />
               </div>
               <span className="tracking-wide text-base font-extrabold text-amber-500 dark:text-amber-400">
                 Jewellery <span className="text-slate-900 dark:text-zinc-100">Workshop</span>
               </span>
-            </div>
+            </Link>
 
             <button
               onClick={toggleTheme}

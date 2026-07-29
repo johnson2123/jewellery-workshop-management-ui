@@ -431,7 +431,7 @@ export const Activities = () => {
                   value={formData.activityCode}
                   onChange={(e) => setFormData({ ...formData, activityCode: e.target.value })}
                   disabled={Boolean(selectedActivity)} 
-                  placeholder="e.g. 101"
+                  placeholder="e.g. 1001"
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 rounded-xl text-slate-900 dark:text-zinc-100 font-mono text-sm focus:outline-none transition-all disabled:opacity-60"
                 />
                 {formErrors.activityCode && (
