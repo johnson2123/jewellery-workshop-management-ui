@@ -5,6 +5,7 @@ import apiClient from './apiClient';
  * @property {string} id
  * @property {string} userName
  * @property {string} email
+ * @property {string} [phoneNumber]
  * @property {string[]} roles
  */
 
@@ -91,16 +92,12 @@ export const authApi = {
 
   /**
    * Updates the authenticated user's password.
-   * @param {{ currentPassword: string, newPassword: string }} data
+   * @param {{ currentPassword: string, newPassword: string, confirmPassword: string }} data
    * @returns {Promise<null>}
    */
   changePassword: (data) => {
-    console.log('Simulating API call with data:', data);
-
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({ message: 'Password changed successfully.' });
-      }, 1000);
+    return apiClient.post('/auth/change-password', data, {
+      successToast: 'Password updated successfully!'
     });
   },
 
